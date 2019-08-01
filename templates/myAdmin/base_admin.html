@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static%}
+{% block content_base %}
+<div class="container">
+  <div class="row-sm">
+    <div class="col-sm-12">
+      <nav class="navbar navbar-expand-lg navbar-light bg-light">
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            {% if request.path == '/admins/users'%}
+            <li class="nav-item active">
+              <a class="nav-link" href="/admins/users">Пользователи <span class="sr-only">(current)</span></a>
+            </li>
+            {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="/admins/users">Пользователи <span class="sr-only">(current)</span></a>
+            </li>
+            {% endif %}
+            {% if request.path == '/admins/categories'%}
+            <li class="nav-item active">
+              <a class="nav-link" href="/admins/categories">Категории</a>
+            </li>
+            {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="/admins/categories">Категории</a>
+            </li>
+            {% endif %}
+            <li class="nav-item mt-4 ml-3">
+              <a href="/admins/backup" class="btn-sm btn-secondary ">Сделать бэкап БД</a>
+            </li>
+            <li class="nav-item mt-4 ml-3">
+              <a href="/admins/export" class="btn-sm btn-secondary ">Сделать экспорт постов </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      {% block content_admin %}
+
+      {% endblock %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

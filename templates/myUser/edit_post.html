@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+Лента
+{% endblock %}
+{% block content_base %}
+<div class="container">
+  {% if request.user.id == post.id_user.id or request.user.is_superuser%}
+    <div class="row-sm px-5 py-3 shadow-lg bg-light">
+      <form class="mb-3" action="/edit_post/{{post.id}}/" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h1 class="h2 font-weight-normal text-center">Редактировать пост</h1>
+        <label for="text" hidden>Текст</label>
+        <textarea type="text" id="text" name="text" class="form-control mb-3" rows="14" cols="100">{{post.text}}</textarea>
+
+        <div class="row mx-3">
+          <div class="col-6">
+            <label for="image_url">Изображение</label>
+            <input type="file" id="image_url" name="image_url" class="form-control-file mt-1">
+          </div>
+          <div class="col-6">
+            <label for="id_category">Категория</label>
+            <select class="form-control " name="id_category" id="id_category">
+              {% for category in categories%}
+              {% if post.id_category.id == category.id %}
+                <option selected value="{{ category.id }}">{{category.name_category}}</option>
+              {% else %}
+                <option value="{{ category.id }}">{{category.name_category}}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="row-sm  mt-3 pb-3 px-3">
+          <button class="btn btn-sm btn-primary btn-block" type="submit">Сохранить изменения</button>
+        </div>
+      </form>
+    </div>
+  {% else %}
+  <div class="bg-light rounded shadow-lg mt-3" style="height:50vh;">
+    <div class="text-center" style="width:100%;">
+      <i><big>У вас не доступа на редактирование этого поста</big></i><br>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static%}
+{% block content_base %}
+
+<main role="main" class="container">
+  <div class="row shadow-lg rounded py-3 my-bg-light-green">
+    <div class="col-sm-10">
+      <h1 class="">{{user_profile.username}}</h1>
+      {% if request.user.id == user_profile.id %}
+      <!-- <div class="form-inline">
+        <a href="new_post" class="w-25">
+          <button type="button" class="btn btn-info w-100">Новый пост</button>
+        </a>
+      </div> -->
+      <div class="form-inline mt-3">
+        <a href="/profile/edit/" class="w-25">
+          <button type="button" class="shadow rounded btn text-light bg-info mr-2 w-100"><span class="glyphicon glyphicon-edit"></span> Редактировать профиль</button>
+        </a>
+      </div>
+        {% if request.user.is_superuser %}
+        <div class="form-inline mt-3">
+          <a href="/admins/users" class="w-25">
+            <button type="button" class="shadow rounded btn text-light bg-info w-100"><span class="glyphicon glyphicon-wrench"></span> Панель администратора</button>
+          </a>
+        </div>
+        {% endif %}
+      {% endif %}
+      <br>
+    </div>
+    <div class="col-sm-2">
+        <img title="profile image" width="200" height="200" class="img-circle img-responsive" src="{% static profile.avatar_url %}">
+    </div>
+  </div>
+  <br>
+  <div class="row py-3 mb-3">
+    <div class="col-sm-3">
+      <!--left col-->
+      <ul class="list-group shadow-lg rounded">
+        <li class="list-group-item text-light bg-info" contenteditable="false">Профайл</li>
+        <li class="list-group-item text-right bg-light-blue"><span class="pull-left"><strong class="">Полное имя: </strong></span>{{user_profile.first_name}} {{user_profile.last_name}}</li>
+        <li class="list-group-item text-right bg-light-blue"><span class="pull-left"><strong class="">Дата рождения: </strong></span>{{user_profile.profile.birthday|date:"d M Y"}}</li>
+        <li class="list-group-item text-right bg-light-blue"><span class="pull-left"><strong class="">Дата регистрации: </strong></span>{{user_profile.date_joined|date:"d M Y"}}</li>
+        <li class="list-group-item text-right bg-light-blue"><span class="pull-left"><strong class="">Возраст: </strong></span>{{years}}</li>
+        <li class="list-group-item text-right bg-light-blue"><span class="pull-left"><strong class="">Пол: </strong></span>{{user_profile.profile.gender}}</li>
+        <li class="list-group-item text-light bg-info" contenteditable="false">Контакты</li>
+        <li class="list-group-item text-right bg-light-blue"><span class="pull-left"><strong class="">Email: </strong></span>{{user_profile.email}}</li>
+
+      </ul>
+
+
+    </div>
+    <!--/col-3-->
+{% block content_profile %}
+
+{% endblock%}
+
+  </div>
+</main>
+
+{% endblock %}

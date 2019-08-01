@@ -1,0 +1,1487 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 10.6 (Ubuntu 10.6-0ubuntu0.18.04.1)
+-- Dumped by pg_dump version 10.6 (Ubuntu 10.6-0ubuntu0.18.04.1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+--
+-- Name: my_user; Type: TYPE; Schema: public; Owner: user_django
+--
+
+CREATE TYPE public.my_user AS (
+	id integer,
+	first_name character varying(150),
+	last_name character varying(150),
+	username character varying(150),
+	count_post integer,
+	count_comment integer,
+	avatar_url character varying(150)
+);
+
+
+ALTER TYPE public.my_user OWNER TO user_django;
+
+--
+-- Name: post; Type: TYPE; Schema: public; Owner: user_django
+--
+
+CREATE TYPE public.post AS (
+	id integer,
+	text text,
+	image_url character varying(150),
+	published_date timestamp without time zone,
+	id_category_id integer,
+	id_user_id integer,
+	count_comment integer
+);
+
+
+ALTER TYPE public.post OWNER TO user_django;
+
+--
+-- Name: add_profile(); Type: FUNCTION; Schema: public; Owner: user_django
+--
+
+CREATE FUNCTION public.add_profile() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+ DECLARE
+  id Integer;
+ BEGIN
+  id = (SELECT MAX(auth_user.id) FROM auth_user);
+  insert into "myUser_profile"(avatar_url, id_user_id, count_comment, count_post)
+  values('/image/default_avatar.png', id, 0, 0);
+ return null;
+ END;
+$$;
+
+
+ALTER FUNCTION public.add_profile() OWNER TO user_django;
+
+--
+-- Name: get_object_fields(text); Type: FUNCTION; Schema: public; Owner: user_django
+--
+
+CREATE FUNCTION public.get_object_fields(s text) RETURNS SETOF public.post
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+  result_record post;
+
+BEGIN
+  FOR result_record IN SELECT * FROM index_post 
+  WHERE "text" ILIKE ('%' || s || '%')
+  LOOP
+    RETURN NEXT result_record;
+  END LOOP;
+  RETURN;
+
+END
+$$;
+
+
+ALTER FUNCTION public.get_object_fields(s text) OWNER TO user_django;
+
+--
+-- Name: get_user_fields(text); Type: FUNCTION; Schema: public; Owner: user_django
+--
+
+CREATE FUNCTION public.get_user_fields(s text) RETURNS SETOF public.my_user
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+  result_record my_user;
+
+BEGIN
+  FOR result_record IN SELECT U.id, U.username, U.last_name, U.first_name,
+			      P.count_comment, P.count_post, P.avatar_url
+  FROM "auth_user" U inner join "myUser_profile" P
+	on U.id = P.id_user_id
+  WHERE 
+	U."username" ILIKE ('%' || s || '%') or
+	U."first_name" ILIKE ('%' || s || '%') or
+	U."last_name" ILIKE ('%' || s || '%')
+  LOOP
+    RETURN NEXT result_record;
+  END LOOP;
+  RETURN;
+
+END
+$$;
+
+
+ALTER FUNCTION public.get_user_fields(s text) OWNER TO user_django;
+
+--
+-- Name: minus_comment(integer); Type: FUNCTION; Schema: public; Owner: user_django
+--
+
+CREATE FUNCTION public.minus_comment(id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE "myUser_profile"
+	SET count_comment=count_comment - 1
+	WHERE id_user_id IN (SELECT id_user_id FROM "myUser_profile" where id_user_id = 20);
+    RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.minus_comment(id integer) OWNER TO user_django;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: auth_group; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.auth_group (
+    id integer NOT NULL,
+    name character varying(80) NOT NULL
+);
+
+
+ALTER TABLE public.auth_group OWNER TO user_django;
+
+--
+-- Name: auth_group_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.auth_group_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.auth_group_id_seq OWNER TO user_django;
+
+--
+-- Name: auth_group_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.auth_group_id_seq OWNED BY public.auth_group.id;
+
+
+--
+-- Name: auth_group_permissions; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.auth_group_permissions (
+    id integer NOT NULL,
+    group_id integer NOT NULL,
+    permission_id integer NOT NULL
+);
+
+
+ALTER TABLE public.auth_group_permissions OWNER TO user_django;
+
+--
+-- Name: auth_group_permissions_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.auth_group_permissions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.auth_group_permissions_id_seq OWNER TO user_django;
+
+--
+-- Name: auth_group_permissions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.auth_group_permissions_id_seq OWNED BY public.auth_group_permissions.id;
+
+
+--
+-- Name: auth_permission; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.auth_permission (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    content_type_id integer NOT NULL,
+    codename character varying(100) NOT NULL
+);
+
+
+ALTER TABLE public.auth_permission OWNER TO user_django;
+
+--
+-- Name: auth_permission_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.auth_permission_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.auth_permission_id_seq OWNER TO user_django;
+
+--
+-- Name: auth_permission_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.auth_permission_id_seq OWNED BY public.auth_permission.id;
+
+
+--
+-- Name: auth_user; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.auth_user (
+    id integer NOT NULL,
+    password character varying(128) NOT NULL,
+    last_login timestamp with time zone,
+    is_superuser boolean NOT NULL,
+    username character varying(150) NOT NULL,
+    first_name character varying(30) NOT NULL,
+    last_name character varying(150) NOT NULL,
+    email character varying(254) NOT NULL,
+    is_staff boolean NOT NULL,
+    is_active boolean NOT NULL,
+    date_joined timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public.auth_user OWNER TO user_django;
+
+--
+-- Name: auth_user_groups; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.auth_user_groups (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    group_id integer NOT NULL
+);
+
+
+ALTER TABLE public.auth_user_groups OWNER TO user_django;
+
+--
+-- Name: auth_user_groups_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.auth_user_groups_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.auth_user_groups_id_seq OWNER TO user_django;
+
+--
+-- Name: auth_user_groups_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.auth_user_groups_id_seq OWNED BY public.auth_user_groups.id;
+
+
+--
+-- Name: auth_user_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.auth_user_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.auth_user_id_seq OWNER TO user_django;
+
+--
+-- Name: auth_user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.auth_user_id_seq OWNED BY public.auth_user.id;
+
+
+--
+-- Name: auth_user_user_permissions; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.auth_user_user_permissions (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    permission_id integer NOT NULL
+);
+
+
+ALTER TABLE public.auth_user_user_permissions OWNER TO user_django;
+
+--
+-- Name: auth_user_user_permissions_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.auth_user_user_permissions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.auth_user_user_permissions_id_seq OWNER TO user_django;
+
+--
+-- Name: auth_user_user_permissions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.auth_user_user_permissions_id_seq OWNED BY public.auth_user_user_permissions.id;
+
+
+--
+-- Name: django_admin_log; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.django_admin_log (
+    id integer NOT NULL,
+    action_time timestamp with time zone NOT NULL,
+    object_id text,
+    object_repr character varying(200) NOT NULL,
+    action_flag smallint NOT NULL,
+    change_message text NOT NULL,
+    content_type_id integer,
+    user_id integer NOT NULL,
+    CONSTRAINT django_admin_log_action_flag_check CHECK ((action_flag >= 0))
+);
+
+
+ALTER TABLE public.django_admin_log OWNER TO user_django;
+
+--
+-- Name: django_admin_log_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.django_admin_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.django_admin_log_id_seq OWNER TO user_django;
+
+--
+-- Name: django_admin_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.django_admin_log_id_seq OWNED BY public.django_admin_log.id;
+
+
+--
+-- Name: django_content_type; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.django_content_type (
+    id integer NOT NULL,
+    app_label character varying(100) NOT NULL,
+    model character varying(100) NOT NULL
+);
+
+
+ALTER TABLE public.django_content_type OWNER TO user_django;
+
+--
+-- Name: django_content_type_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.django_content_type_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.django_content_type_id_seq OWNER TO user_django;
+
+--
+-- Name: django_content_type_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.django_content_type_id_seq OWNED BY public.django_content_type.id;
+
+
+--
+-- Name: django_migrations; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.django_migrations (
+    id integer NOT NULL,
+    app character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
+    applied timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public.django_migrations OWNER TO user_django;
+
+--
+-- Name: django_migrations_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.django_migrations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.django_migrations_id_seq OWNER TO user_django;
+
+--
+-- Name: django_migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.django_migrations_id_seq OWNED BY public.django_migrations.id;
+
+
+--
+-- Name: django_session; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.django_session (
+    session_key character varying(40) NOT NULL,
+    session_data text NOT NULL,
+    expire_date timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE public.django_session OWNER TO user_django;
+
+--
+-- Name: index_category; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.index_category (
+    id integer NOT NULL,
+    name_category character varying(150) NOT NULL
+);
+
+
+ALTER TABLE public.index_category OWNER TO user_django;
+
+--
+-- Name: index_category_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.index_category_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.index_category_id_seq OWNER TO user_django;
+
+--
+-- Name: index_category_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.index_category_id_seq OWNED BY public.index_category.id;
+
+
+--
+-- Name: index_comments; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.index_comments (
+    id integer NOT NULL,
+    text text NOT NULL,
+    published_date timestamp with time zone NOT NULL,
+    id_post_id integer NOT NULL,
+    id_user_id integer NOT NULL
+);
+
+
+ALTER TABLE public.index_comments OWNER TO user_django;
+
+--
+-- Name: index_comments_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.index_comments_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.index_comments_id_seq OWNER TO user_django;
+
+--
+-- Name: index_comments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.index_comments_id_seq OWNED BY public.index_comments.id;
+
+
+--
+-- Name: index_post; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public.index_post (
+    id integer NOT NULL,
+    text text NOT NULL,
+    image_url character varying(150),
+    published_date timestamp with time zone NOT NULL,
+    id_category_id integer NOT NULL,
+    id_user_id integer NOT NULL,
+    count_comment integer NOT NULL
+);
+
+
+ALTER TABLE public.index_post OWNER TO user_django;
+
+--
+-- Name: index_post_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public.index_post_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.index_post_id_seq OWNER TO user_django;
+
+--
+-- Name: index_post_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public.index_post_id_seq OWNED BY public.index_post.id;
+
+
+--
+-- Name: myUser_profile; Type: TABLE; Schema: public; Owner: user_django
+--
+
+CREATE TABLE public."myUser_profile" (
+    id integer NOT NULL,
+    avatar_url character varying(150) NOT NULL,
+    birthday date,
+    gender character varying(2),
+    id_user_id integer NOT NULL,
+    count_comment integer NOT NULL,
+    count_post integer NOT NULL
+);
+
+
+ALTER TABLE public."myUser_profile" OWNER TO user_django;
+
+--
+-- Name: myUser_profile_id_seq; Type: SEQUENCE; Schema: public; Owner: user_django
+--
+
+CREATE SEQUENCE public."myUser_profile_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."myUser_profile_id_seq" OWNER TO user_django;
+
+--
+-- Name: myUser_profile_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: user_django
+--
+
+ALTER SEQUENCE public."myUser_profile_id_seq" OWNED BY public."myUser_profile".id;
+
+
+--
+-- Name: users; Type: VIEW; Schema: public; Owner: user_django
+--
+
+CREATE VIEW public.users AS
+ SELECT a.id,
+    a.username,
+    a.first_name,
+    a.last_name,
+    a.email,
+    a.date_joined,
+    m.avatar_url,
+    m.gender,
+    m.birthday
+   FROM public.auth_user a,
+    public."myUser_profile" m
+  WHERE (m.id_user_id = a.id);
+
+
+ALTER TABLE public.users OWNER TO user_django;
+
+--
+-- Name: auth_group id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group ALTER COLUMN id SET DEFAULT nextval('public.auth_group_id_seq'::regclass);
+
+
+--
+-- Name: auth_group_permissions id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group_permissions ALTER COLUMN id SET DEFAULT nextval('public.auth_group_permissions_id_seq'::regclass);
+
+
+--
+-- Name: auth_permission id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_permission ALTER COLUMN id SET DEFAULT nextval('public.auth_permission_id_seq'::regclass);
+
+
+--
+-- Name: auth_user id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user ALTER COLUMN id SET DEFAULT nextval('public.auth_user_id_seq'::regclass);
+
+
+--
+-- Name: auth_user_groups id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_groups ALTER COLUMN id SET DEFAULT nextval('public.auth_user_groups_id_seq'::regclass);
+
+
+--
+-- Name: auth_user_user_permissions id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_user_permissions ALTER COLUMN id SET DEFAULT nextval('public.auth_user_user_permissions_id_seq'::regclass);
+
+
+--
+-- Name: django_admin_log id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_admin_log ALTER COLUMN id SET DEFAULT nextval('public.django_admin_log_id_seq'::regclass);
+
+
+--
+-- Name: django_content_type id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_content_type ALTER COLUMN id SET DEFAULT nextval('public.django_content_type_id_seq'::regclass);
+
+
+--
+-- Name: django_migrations id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_migrations ALTER COLUMN id SET DEFAULT nextval('public.django_migrations_id_seq'::regclass);
+
+
+--
+-- Name: index_category id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_category ALTER COLUMN id SET DEFAULT nextval('public.index_category_id_seq'::regclass);
+
+
+--
+-- Name: index_comments id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_comments ALTER COLUMN id SET DEFAULT nextval('public.index_comments_id_seq'::regclass);
+
+
+--
+-- Name: index_post id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_post ALTER COLUMN id SET DEFAULT nextval('public.index_post_id_seq'::regclass);
+
+
+--
+-- Name: myUser_profile id; Type: DEFAULT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public."myUser_profile" ALTER COLUMN id SET DEFAULT nextval('public."myUser_profile_id_seq"'::regclass);
+
+
+--
+-- Data for Name: auth_group; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.auth_group (id, name) FROM stdin;
+\.
+
+
+--
+-- Data for Name: auth_group_permissions; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.auth_group_permissions (id, group_id, permission_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: auth_permission; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
+1	Can add log entry	1	add_logentry
+2	Can change log entry	1	change_logentry
+3	Can delete log entry	1	delete_logentry
+4	Can view log entry	1	view_logentry
+5	Can add permission	2	add_permission
+6	Can change permission	2	change_permission
+7	Can delete permission	2	delete_permission
+8	Can view permission	2	view_permission
+9	Can add group	3	add_group
+10	Can change group	3	change_group
+11	Can delete group	3	delete_group
+12	Can view group	3	view_group
+13	Can add user	4	add_user
+14	Can change user	4	change_user
+15	Can delete user	4	delete_user
+16	Can view user	4	view_user
+17	Can add content type	5	add_contenttype
+18	Can change content type	5	change_contenttype
+19	Can delete content type	5	delete_contenttype
+20	Can view content type	5	view_contenttype
+21	Can add session	6	add_session
+22	Can change session	6	change_session
+23	Can delete session	6	delete_session
+24	Can view session	6	view_session
+25	Can add category	7	add_category
+26	Can change category	7	change_category
+27	Can delete category	7	delete_category
+28	Can view category	7	view_category
+29	Can add comments	8	add_comments
+30	Can change comments	8	change_comments
+31	Can delete comments	8	delete_comments
+32	Can view comments	8	view_comments
+33	Can add post	9	add_post
+34	Can change post	9	change_post
+35	Can delete post	9	delete_post
+36	Can view post	9	view_post
+37	Can add profile	10	add_profile
+38	Can change profile	10	change_profile
+39	Can delete profile	10	delete_profile
+40	Can view profile	10	view_profile
+\.
+
+
+--
+-- Data for Name: auth_user; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.auth_user (id, password, last_login, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined) FROM stdin;
+21	pbkdf2_sha256$120000$J6tMwz4auTSA$Xv9JCaIDoPugFc5JnnJwTacMUTLfqY1+Wm3yikPn3Is=	2018-11-21 21:53:01.876769+02	f	ivan	Иван	Котов	ivan@gmail.vom	f	t	2018-11-21 20:43:43.220515+02
+1	pbkdf2_sha256$120000$PqLXyXTyXc6C$crsCrLWb/YtIBcdy+rm7xgY7fbxu6sVD90vz1Gosacg=	2018-11-23 21:04:15.434266+02	t	admin	Админ	Админ	admin@admin.com	t	t	2018-11-16 20:15:17.473683+02
+2	pbkdf2_sha256$120000$9vhIs6LNAemg$6raBj6p6NNBj/G21nDj/HWPTvDr4zpAWbGJBa9UF7jM=	2018-11-20 00:04:30.220038+02	f	user	Сергей	Сергеев	user@email.com	f	t	2018-11-17 14:39:23.92168+02
+20	pbkdf2_sha256$120000$3htTpvYhMHLy$GXB4csYodlcteYzbvYBDN5wMZG6XJ2gGzq+kWLtTL6A=	2018-11-21 20:58:32.469727+02	f	anatoliy	Анатолий	Старый	anatoliy@email.com	f	t	2018-11-21 20:34:03.391415+02
+\.
+
+
+--
+-- Data for Name: auth_user_groups; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.auth_user_groups (id, user_id, group_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: auth_user_user_permissions; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.auth_user_user_permissions (id, user_id, permission_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: django_admin_log; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.django_admin_log (id, action_time, object_id, object_repr, action_flag, change_message, content_type_id, user_id) FROM stdin;
+1	2018-11-16 21:57:09.150174+02	1	Природа	1	[{"added": {}}]	7	1
+2	2018-11-17 12:40:22.563568+02	1	images/default_photo.png	1	[{"added": {}}]	10	1
+3	2018-11-17 20:57:54.650807+02	2	Животные	1	[{"added": {}}]	7	1
+\.
+
+
+--
+-- Data for Name: django_content_type; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.django_content_type (id, app_label, model) FROM stdin;
+1	admin	logentry
+2	auth	permission
+3	auth	group
+4	auth	user
+5	contenttypes	contenttype
+6	sessions	session
+7	index	category
+8	index	comments
+9	index	post
+10	myUser	profile
+\.
+
+
+--
+-- Data for Name: django_migrations; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.django_migrations (id, app, name, applied) FROM stdin;
+1	contenttypes	0001_initial	2018-11-16 19:59:02.739441+02
+2	auth	0001_initial	2018-11-16 19:59:03.753571+02
+3	admin	0001_initial	2018-11-16 19:59:03.964474+02
+4	admin	0002_logentry_remove_auto_add	2018-11-16 19:59:03.999704+02
+5	admin	0003_logentry_add_action_flag_choices	2018-11-16 19:59:04.016966+02
+6	contenttypes	0002_remove_content_type_name	2018-11-16 19:59:04.086222+02
+7	auth	0002_alter_permission_name_max_length	2018-11-16 19:59:04.109287+02
+8	auth	0003_alter_user_email_max_length	2018-11-16 19:59:04.141511+02
+9	auth	0004_alter_user_username_opts	2018-11-16 19:59:04.160418+02
+10	auth	0005_alter_user_last_login_null	2018-11-16 19:59:04.186095+02
+11	auth	0006_require_contenttypes_0002	2018-11-16 19:59:04.197112+02
+12	auth	0007_alter_validators_add_error_messages	2018-11-16 19:59:04.213679+02
+13	auth	0008_alter_user_username_max_length	2018-11-16 19:59:04.275247+02
+14	auth	0009_alter_user_last_name_max_length	2018-11-16 19:59:04.307821+02
+15	index	0001_initial	2018-11-16 19:59:04.830648+02
+16	myUser	0001_initial	2018-11-16 19:59:04.975059+02
+17	sessions	0001_initial	2018-11-16 19:59:05.186478+02
+18	myUser	0002_auto_20181117_1602	2018-11-17 18:02:37.435936+02
+19	myUser	0003_auto_20181117_1603	2018-11-17 18:03:41.355457+02
+20	index	0002_post_count_comment	2018-11-18 18:36:40.144213+02
+21	myUser	0004_auto_20181119_2153	2018-11-19 23:53:43.30455+02
+\.
+
+
+--
+-- Data for Name: django_session; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.django_session (session_key, session_data, expire_date) FROM stdin;
+un4ae6u9nlvybwmqpgeewkp2xz6dqail	NTVkODIwOGYxZmU0YjhjYzViMzBiYjU3NzA5M2M4N2VjNzUyYjhjNTp7Il9hdXRoX3VzZXJfaWQiOiIxNyIsIl9hdXRoX3VzZXJfYmFja2VuZCI6ImRqYW5nby5jb250cmliLmF1dGguYmFja2VuZHMuTW9kZWxCYWNrZW5kIiwiX2F1dGhfdXNlcl9oYXNoIjoiNDE0MjllZmUyYTdkYTgxYTVhZmJhMTFkNWNiMGMwMjcyMTI0NWU3MSJ9	2018-12-04 00:34:00.019052+02
+gj1d6866u5jem7hdeh72cktnk5li1bo9	MTI5ZThlZmY1NGNkNzBhYTVmZGZjN2FkNmFhMzg3MjIyM2JjNDU1Mjp7fQ==	2018-11-30 20:18:54.962692+02
+1hk88pqrao1jfhu59bxa2nnwlaq43t6m	ZDIxNjIyMmE1YTYzZmJjZjhkY2UxNDBkNGIwMzk1ZGZiZTE5NTk5NTp7Il9hdXRoX3VzZXJfaWQiOiIxOSIsIl9hdXRoX3VzZXJfYmFja2VuZCI6ImRqYW5nby5jb250cmliLmF1dGguYmFja2VuZHMuTW9kZWxCYWNrZW5kIiwiX2F1dGhfdXNlcl9oYXNoIjoiNTZiNjMzOWYzZjg1NmVjOThlNDY4ZTdlNmZlMmMzNjNiNTk2NGVkZCJ9	2018-12-04 00:35:30.676332+02
+d06m9sbd8bzeb4g14z2ivka1jevkn4pk	NGQ5MTJmMzNhOTI3OTNjZWUwOTllN2IzODhmNDY3ODEzZTIwMDE5Yzp7Il9hdXRoX3VzZXJfaWQiOiIxIiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiJhMGUzMDIxMWMwMzljYjYwOGVkMzEzMzRiMDJkZDI1MjZjZjdlZDRhIn0=	2018-12-05 20:58:00.894657+02
+cpr69epknk2vsfj8rpiydvhgys88p7hp	NGQ5MTJmMzNhOTI3OTNjZWUwOTllN2IzODhmNDY3ODEzZTIwMDE5Yzp7Il9hdXRoX3VzZXJfaWQiOiIxIiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiJhMGUzMDIxMWMwMzljYjYwOGVkMzEzMzRiMDJkZDI1MjZjZjdlZDRhIn0=	2018-12-07 21:04:15.489405+02
+vmekhjgvfzhok29ph3uhlf751g5cfbwh	ZjBiZjFmM2YzNjRjZmU4MWY2ZjYyNThhOTcyYjA1NzI2MWQ2MmIyODp7Il9hdXRoX3VzZXJfaWQiOiIyIiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiIxMGY5OGEyMmRmNjI1NzBiNzgwNmVkMjllY2QxZTA1MDZmN2Q3MTNjIn0=	2018-12-04 00:04:30.231458+02
+\.
+
+
+--
+-- Data for Name: index_category; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.index_category (id, name_category) FROM stdin;
+1	Природа
+2	Животные
+4	Новости
+5	Растения
+6	Небо
+\.
+
+
+--
+-- Data for Name: index_comments; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.index_comments (id, text, published_date, id_post_id, id_user_id) FROM stdin;
+38	Где он всё хранил?	2018-11-21 21:52:38.190316+02	19	20
+39	Очень странная новость.	2018-11-21 21:53:23.357999+02	20	21
+\.
+
+
+--
+-- Data for Name: index_post; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public.index_post (id, text, image_url, published_date, id_category_id, id_user_id, count_comment) FROM stdin;
+17	На катера типа Кентавр будет установлено дополнительное оборудование и проведены испытания в море.\r\nВ Одессу в понедельник, 19 ноября, прибыли два десантно-штурмовых катера типа Кентавр, которые недавно спустил на воду киевский завод Кузница на Рыбальском. Об этом сообщает пресс-служба командования Военно-морских сил ВСУ.\r\n \r\nПО ТЕМЕ\r\n В ВМС рассказали о предложении США по фрегатам\r\nВ ВМС рассказали о предложении США по фрегатам\r\nВчера, 14:54\r\n \r\n"Для продолжения испытаний в Одессу прибыли новые десантно-штурмовые катера проекта 58503 (Кентавр). Здесь будут продолжены испытания новых боевых единиц, построенных ЧАО Завод Кузница на Рыбальском по заказу Министерства обороны Украины для ВМС ВС Украины", - отметил начальник Управления кораблестроения командования ВМС Украины Василий Радчук.\r\nПо его словам, катера осуществили успешный переход на собственных двигателях из Киева в Одессу, а теперь на них будет установлено дополнительное оборудование и организованы ходовые испытания в море и переход к стадии государственных испытаний.\r\n\r\nКак подчеркнул Радчук, во время строительства катера прошли модернизацию: на них установлены некоторые новые системы, которые сейчас будут проходить проверку на функциональность как отдельно, так и в составе корабля.\r\n\r\nКомандовать обеими катерами будут недавние выпускники Одесского института Военно-морских сил.	image/2231828.jpg	2018-11-20 01:40:25.746004+02	4	1	0
+15	lkfmgklfd		2018-11-19 23:58:13.670169+02	1	1	0
+19	В Одесской области правоохранители задержали 50-летнего жителя г. Болград, который хранил у себя дома около 40 килограммов наркотиков. Об этом во вторник, 23 октября, сообщает пресс-служба областной полиции.\r\n\r\nОтмечено, что во время проведения санкционированного обыска по месту жительства мужчины были обнаружены растения конопли и уже готовое к употреблению наркотическое вещество, похожее на марихуану.\r\n\r\n"Их общий вес - около 40 килограммов. Изъятое направлено на экспертизу. Правоохранители устанавливают, с какой целью мужчина хранил у себя дома такое количество наркотических средств", - говорится в сообщении.\r\n\r\nПо данным ведомства, на чердаке дома задержанного полицейские также обнаружили помещение, в котором выращивались конопли. Нарколаборатория была оборудована ультрафиолетовым освещением, системой орошения и датчиками соблюдения температурного режима, доложили в полиции.\r\n\r\nСейчас по данному факту начато уголовное производство по статье незаконное производство, изготовление, приобретение, хранение, перевозка, пересылка или сбыт наркотических средств, психотропных веществ или их аналогов.\r\n\r\nРанее в Одесской области правоохранители изъяли у 36-летнего мужчины 20 кг каннабиса, 10 кг свежих измельченных наркосодержащих растений и большое количество кустов конопли.		2018-11-21 20:45:31.596325+02	5	21	1
+20	Пожарные английского графства Нортгемптоншир столкнулись с неоднозначной ситуацией. Они приехали по тревоге в один из частных домов, однако оказалось, что экстренные службы «вызвал» попугай. Оператор диспетчерской сообщила, что поступил звуковой сигнал — сработала сигнализация. К дому были направлены пожарные, но когда спасатели подъехали к жилищу, там все было в порядке. «Это была ложная тревога, поскольку не было никого пожара. Все были в безопасности», — рассказал один из спасателей. Оказалось, что звуки пожарной сигнализации сымитировал попугай, живший в доме. В результате сработала экстренная система. В свою очередь, 63-летний хозяин дома Стив рассказал, что у него несколько живут два попугая. Одна из птиц по кличке Джаз стала «хулиганить». По словам пожилого мужчины, попугай мастерски сымитировала звук пожарной тревоги, тем самым, вызвав экстренные службы. Ранее забавная ситуация с попугаем произошла в Лондоне. Так, птица, застрявшая на одной из крыше домов, обматерила приехавших ей на помощь спасателей.	image/belyj-volnistyj-popugajchik-768x575-610x457.jpg	2018-11-21 21:01:22.306432+02	2	20	1
+\.
+
+
+--
+-- Data for Name: myUser_profile; Type: TABLE DATA; Schema: public; Owner: user_django
+--
+
+COPY public."myUser_profile" (id, avatar_url, birthday, gender, id_user_id, count_comment, count_post) FROM stdin;
+1	image/default_avatar.png	2010-12-17	М	1	0	2
+2	image/user.png	1997-06-12	М	2	0	0
+18	/image/default_avatar.png	1989-06-09	М	20	1	1
+19	/image/default_avatar.png	1993-06-16	М	21	1	1
+\.
+
+
+--
+-- Name: auth_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.auth_group_id_seq', 1, false);
+
+
+--
+-- Name: auth_group_permissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.auth_group_permissions_id_seq', 1, false);
+
+
+--
+-- Name: auth_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.auth_permission_id_seq', 40, true);
+
+
+--
+-- Name: auth_user_groups_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.auth_user_groups_id_seq', 1, false);
+
+
+--
+-- Name: auth_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.auth_user_id_seq', 21, true);
+
+
+--
+-- Name: auth_user_user_permissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.auth_user_user_permissions_id_seq', 1, false);
+
+
+--
+-- Name: django_admin_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.django_admin_log_id_seq', 3, true);
+
+
+--
+-- Name: django_content_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.django_content_type_id_seq', 10, true);
+
+
+--
+-- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 21, true);
+
+
+--
+-- Name: index_category_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.index_category_id_seq', 6, true);
+
+
+--
+-- Name: index_comments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.index_comments_id_seq', 39, true);
+
+
+--
+-- Name: index_post_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public.index_post_id_seq', 25, true);
+
+
+--
+-- Name: myUser_profile_id_seq; Type: SEQUENCE SET; Schema: public; Owner: user_django
+--
+
+SELECT pg_catalog.setval('public."myUser_profile_id_seq"', 19, true);
+
+
+--
+-- Name: auth_group auth_group_name_key; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group
+    ADD CONSTRAINT auth_group_name_key UNIQUE (name);
+
+
+--
+-- Name: auth_group_permissions auth_group_permissions_group_id_permission_id_0cd325b0_uniq; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group_permissions
+    ADD CONSTRAINT auth_group_permissions_group_id_permission_id_0cd325b0_uniq UNIQUE (group_id, permission_id);
+
+
+--
+-- Name: auth_group_permissions auth_group_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group_permissions
+    ADD CONSTRAINT auth_group_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: auth_group auth_group_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group
+    ADD CONSTRAINT auth_group_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: auth_permission auth_permission_content_type_id_codename_01ab375a_uniq; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_permission
+    ADD CONSTRAINT auth_permission_content_type_id_codename_01ab375a_uniq UNIQUE (content_type_id, codename);
+
+
+--
+-- Name: auth_permission auth_permission_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_permission
+    ADD CONSTRAINT auth_permission_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: auth_user_groups auth_user_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_groups
+    ADD CONSTRAINT auth_user_groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: auth_user_groups auth_user_groups_user_id_group_id_94350c0c_uniq; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_groups
+    ADD CONSTRAINT auth_user_groups_user_id_group_id_94350c0c_uniq UNIQUE (user_id, group_id);
+
+
+--
+-- Name: auth_user auth_user_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user
+    ADD CONSTRAINT auth_user_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: auth_user_user_permissions auth_user_user_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_user_permissions
+    ADD CONSTRAINT auth_user_user_permissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: auth_user_user_permissions auth_user_user_permissions_user_id_permission_id_14a6b632_uniq; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_user_permissions
+    ADD CONSTRAINT auth_user_user_permissions_user_id_permission_id_14a6b632_uniq UNIQUE (user_id, permission_id);
+
+
+--
+-- Name: auth_user auth_user_username_key; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user
+    ADD CONSTRAINT auth_user_username_key UNIQUE (username);
+
+
+--
+-- Name: django_admin_log django_admin_log_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_admin_log
+    ADD CONSTRAINT django_admin_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: django_content_type django_content_type_app_label_model_76bd3d3b_uniq; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_content_type
+    ADD CONSTRAINT django_content_type_app_label_model_76bd3d3b_uniq UNIQUE (app_label, model);
+
+
+--
+-- Name: django_content_type django_content_type_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_content_type
+    ADD CONSTRAINT django_content_type_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: django_migrations django_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_migrations
+    ADD CONSTRAINT django_migrations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: django_session django_session_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_session
+    ADD CONSTRAINT django_session_pkey PRIMARY KEY (session_key);
+
+
+--
+-- Name: index_category index_category_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_category
+    ADD CONSTRAINT index_category_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_comments index_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_comments
+    ADD CONSTRAINT index_comments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_post index_post_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_post
+    ADD CONSTRAINT index_post_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: myUser_profile myUser_profile_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public."myUser_profile"
+    ADD CONSTRAINT "myUser_profile_id_user_id_key" UNIQUE (id_user_id);
+
+
+--
+-- Name: myUser_profile myUser_profile_pkey; Type: CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public."myUser_profile"
+    ADD CONSTRAINT "myUser_profile_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: auth_group_name_a6ea08ec_like; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_group_name_a6ea08ec_like ON public.auth_group USING btree (name varchar_pattern_ops);
+
+
+--
+-- Name: auth_group_permissions_group_id_b120cbf9; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_group_permissions_group_id_b120cbf9 ON public.auth_group_permissions USING btree (group_id);
+
+
+--
+-- Name: auth_group_permissions_permission_id_84c5c92e; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_group_permissions_permission_id_84c5c92e ON public.auth_group_permissions USING btree (permission_id);
+
+
+--
+-- Name: auth_permission_content_type_id_2f476e4b; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_permission_content_type_id_2f476e4b ON public.auth_permission USING btree (content_type_id);
+
+
+--
+-- Name: auth_user_groups_group_id_97559544; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_user_groups_group_id_97559544 ON public.auth_user_groups USING btree (group_id);
+
+
+--
+-- Name: auth_user_groups_user_id_6a12ed8b; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_user_groups_user_id_6a12ed8b ON public.auth_user_groups USING btree (user_id);
+
+
+--
+-- Name: auth_user_user_permissions_permission_id_1fbb5f2c; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_user_user_permissions_permission_id_1fbb5f2c ON public.auth_user_user_permissions USING btree (permission_id);
+
+
+--
+-- Name: auth_user_user_permissions_user_id_a95ead1b; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_user_user_permissions_user_id_a95ead1b ON public.auth_user_user_permissions USING btree (user_id);
+
+
+--
+-- Name: auth_user_username_6821ab7c_like; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX auth_user_username_6821ab7c_like ON public.auth_user USING btree (username varchar_pattern_ops);
+
+
+--
+-- Name: django_admin_log_content_type_id_c4bce8eb; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX django_admin_log_content_type_id_c4bce8eb ON public.django_admin_log USING btree (content_type_id);
+
+
+--
+-- Name: django_admin_log_user_id_c564eba6; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX django_admin_log_user_id_c564eba6 ON public.django_admin_log USING btree (user_id);
+
+
+--
+-- Name: django_session_expire_date_a5c62663; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX django_session_expire_date_a5c62663 ON public.django_session USING btree (expire_date);
+
+
+--
+-- Name: django_session_session_key_c0390e0f_like; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX django_session_session_key_c0390e0f_like ON public.django_session USING btree (session_key varchar_pattern_ops);
+
+
+--
+-- Name: index_comments_id_post_id_a147f611; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX index_comments_id_post_id_a147f611 ON public.index_comments USING btree (id_post_id);
+
+
+--
+-- Name: index_comments_id_user_id_611c56f3; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX index_comments_id_user_id_611c56f3 ON public.index_comments USING btree (id_user_id);
+
+
+--
+-- Name: index_post_id_category_id_fdbeabe5; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX index_post_id_category_id_fdbeabe5 ON public.index_post USING btree (id_category_id);
+
+
+--
+-- Name: index_post_id_user_id_7ad7b7a1; Type: INDEX; Schema: public; Owner: user_django
+--
+
+CREATE INDEX index_post_id_user_id_7ad7b7a1 ON public.index_post USING btree (id_user_id);
+
+
+--
+-- Name: auth_user tr_add_profile; Type: TRIGGER; Schema: public; Owner: user_django
+--
+
+CREATE TRIGGER tr_add_profile AFTER INSERT ON public.auth_user FOR EACH ROW EXECUTE PROCEDURE public.add_profile();
+
+
+--
+-- Name: auth_group_permissions auth_group_permissio_permission_id_84c5c92e_fk_auth_perm; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group_permissions
+    ADD CONSTRAINT auth_group_permissio_permission_id_84c5c92e_fk_auth_perm FOREIGN KEY (permission_id) REFERENCES public.auth_permission(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: auth_group_permissions auth_group_permissions_group_id_b120cbf9_fk_auth_group_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_group_permissions
+    ADD CONSTRAINT auth_group_permissions_group_id_b120cbf9_fk_auth_group_id FOREIGN KEY (group_id) REFERENCES public.auth_group(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: auth_permission auth_permission_content_type_id_2f476e4b_fk_django_co; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_permission
+    ADD CONSTRAINT auth_permission_content_type_id_2f476e4b_fk_django_co FOREIGN KEY (content_type_id) REFERENCES public.django_content_type(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: auth_user_groups auth_user_groups_group_id_97559544_fk_auth_group_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_groups
+    ADD CONSTRAINT auth_user_groups_group_id_97559544_fk_auth_group_id FOREIGN KEY (group_id) REFERENCES public.auth_group(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: auth_user_groups auth_user_groups_user_id_6a12ed8b_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_groups
+    ADD CONSTRAINT auth_user_groups_user_id_6a12ed8b_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: auth_user_user_permissions auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_user_permissions
+    ADD CONSTRAINT auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm FOREIGN KEY (permission_id) REFERENCES public.auth_permission(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: auth_user_user_permissions auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.auth_user_user_permissions
+    ADD CONSTRAINT auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: django_admin_log django_admin_log_content_type_id_c4bce8eb_fk_django_co; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_admin_log
+    ADD CONSTRAINT django_admin_log_content_type_id_c4bce8eb_fk_django_co FOREIGN KEY (content_type_id) REFERENCES public.django_content_type(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: django_admin_log django_admin_log_user_id_c564eba6_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.django_admin_log
+    ADD CONSTRAINT django_admin_log_user_id_c564eba6_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: index_comments index_comments_id_post_id_a147f611_fk_index_post_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_comments
+    ADD CONSTRAINT index_comments_id_post_id_a147f611_fk_index_post_id FOREIGN KEY (id_post_id) REFERENCES public.index_post(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: index_comments index_comments_id_user_id_611c56f3_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_comments
+    ADD CONSTRAINT index_comments_id_user_id_611c56f3_fk_auth_user_id FOREIGN KEY (id_user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: index_post index_post_id_category_id_fdbeabe5_fk_index_category_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_post
+    ADD CONSTRAINT index_post_id_category_id_fdbeabe5_fk_index_category_id FOREIGN KEY (id_category_id) REFERENCES public.index_category(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: index_post index_post_id_user_id_7ad7b7a1_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public.index_post
+    ADD CONSTRAINT index_post_id_user_id_7ad7b7a1_fk_auth_user_id FOREIGN KEY (id_user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: myUser_profile myUser_profile_id_user_id_e75d3420_fk_auth_user_id; Type: FK CONSTRAINT; Schema: public; Owner: user_django
+--
+
+ALTER TABLE ONLY public."myUser_profile"
+    ADD CONSTRAINT "myUser_profile_id_user_id_e75d3420_fk_auth_user_id" FOREIGN KEY (id_user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- PostgreSQL database dump complete
+--
+

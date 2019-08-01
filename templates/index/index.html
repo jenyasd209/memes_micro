@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}
+Лента
+{% endblock %}
+{% block content_base %}
+
+<main role="main" class="container">
+  <div class="row d-flex justify-content-end">
+    <div class="col-sm-3 mt-3" id="fixed-list">
+      <div class="list-group text-center shadow-lg">
+        <p class="list-group-item list-group-item-action bg-info text-white">Категории</p>
+        <a href="/" class="list-group-item list-group-item-action ">Все</a>
+        {% for category in categories %}
+        <a href="/c_{{category.name_category}}" class="list-group-item list-group-item-action ">{{category.name_category}}</a>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="col-sm-9 mb-3 ">
+      {% for post in posts_on_page %}
+      <div class="card my-3 pt-4 px-3 rounded hm-25 d-inline-block w-100 shadow-lg rounded">
+        <div class="d-inline">
+          <div class="row ml-5 mb-3">
+            <a href="/user_id{{post.id_user.id}}">
+              <img title="{{post.id_user.username}}" src="{% static post.id_user.profile.avatar_url%}" alt="user_photo" width="50" height="50" class="rounded-circle mt-2">
+            </a>
+            <div class="d-inline-block ml-3">
+              <a href="/user_id{{post.id_user.id}}">
+                <h4 class="card-title font-weight-bold">
+                  {{post.id_user.username}}
+                </h4>
+              </a>
+              <p class="card-text"><small class="text-muted">Добавлено {{post.published_date|date:" d F Y в H:i"}}</small></p>
+            </div>
+          </div>
+        </div>
+        {% if post.image_url != '' %}
+        <img class="card-img-top img-news" src="{% static post.image_url%}" alt="post photo">
+        {% endif %}
+        <div class="card-body">
+          {% if post.text != '' %}
+          <p class="card-text mx-4 border-0 bg-white">{{post.text | truncatewords:100 }}
+            {% if post.text|length > 100 %}
+            <a href="/post_id{{post.id}}">Читать далее</a>
+            {% endif %}
+          </p>
+          {% endif %}
+          <div class="row justify-content-end">
+            <a href="/post_id{{post.id}}" class="btn text-light bg-info mx-4">Перейти к публикации</a>
+          </div>
+          <div class="d-inline">
+            <div class="row justify-content-between mt-3">
+              <p class="card-text"><small class="text-muted">Коментарии: {{post.count_comment}} <span class="glyphicon glyphicon-comment"></span></small></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% if not posts_on_page %}
+      <div class="bg-light rounded shadow-lg mt-3" style="height:50vh;">
+        <div class="text-center" style="position: absolute; top: 45%; width:100%">
+          <i><big>К сожалению, по вашему запросу ничего не найдено</big></i><br>
+        </div>
+      </div>
+      {% else %}
+      <div class="row-sm d-flex justify-content-center">
+        <div class="div">
+          <nav aria-label="Page navigation">
+            <ul class="pagination">
+              {% if posts_on_page.paginator.num_pages >= 1 %}
+              {% if not posts_on_page.has_previous %}
+              <li class="page-item disabled">
+                <a class="page-link text-dark" href="#">Предыдущая</a>
+              </li>
+              {% else %}
+              <li class="page-item">
+                <a class="page-link bg-light-blue"
+                href="/?page={{ posts_on_page.previous_page_number }}">Предыдущая</a>
+              </li>
+              {% if posts_on_page.previous_page_number != 1 %}
+              <li class="page-item">
+                <a class="page-link bg-light-blue"
+                href="/?page=1">1</a>
+              </li>
+              {% endif %}
+              <li class="page-item">
+                <a class="page-link bg-light-blue"
+                href="/?page={{ posts_on_page.previous_page_number }}">{{ posts_on_page.previous_page_number }}</a>
+              </li>
+              {% endif %}
+              <li class="page-item disabled">
+                <a class="page-link bg-info text-white"
+                href="/?page={{ posts_on_page.number }}">{{ posts_on_page.number }}</a>
+              </li>
+              {% if not posts_on_page.has_next %}
+              <li class="page-item disabled">
+                <a class="page-link text-dark" href="#">Следующая</a>
+              </li>
+              {% else %}
+              <li class="page-item">
+                <a class="page-link bg-light-blue"
+                href="/?page={{ posts_on_page.next_page_number }}">{{ posts_on_page.next_page_number }}</a>
+              </li>
+              {{ posts_on_page.paginator.number }}
+              {% if posts_on_page.next_page_number != posts_on_page.paginator.num_pages %}
+              <li class="page-item">
+                <a class="page-link bg-light-blue"
+                href="/?page={{ posts_on_page.paginator.num_pages }}">{{ posts_on_page.paginator.num_pages }}</a>
+              </li>
+              {% endif %}
+              <li class="page-item">
+                <a class="page-link bg-light-blue"
+                href="/?page={{ posts_on_page.next_page_number }}">Следующая</a>
+              </li>
+              {% endif %}
+
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</main>
+
+{% endblock %}
